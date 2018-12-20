@@ -1,0 +1,6 @@
+[submodule "Libraries/glfw"]
+	path = Libraries/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "Libraries/freetype2"]
+	path = Libraries/freetype2
+	url = https://git.savannah.gnu.org/git/freetype/freetype2.git
