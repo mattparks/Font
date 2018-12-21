@@ -24,51 +24,53 @@ namespace acid
 	class Outline
 	{
 	public:
-		Rect bbox;
+		Rect m_bbox;
 
-		Vector2 *points;
-		uint32_t pointCount;
-		uint32_t pointCapacity;
+		Vector2 *m_points;
+		uint32_t m_pointCount;
+		uint32_t m_pointCapacity;
 
-		ContourRange *contours;
-		uint32_t contourCount;
-		uint32_t contourCapacity;
+		ContourRange *m_contours;
+		uint32_t m_contourCount;
+		uint32_t m_contourCapacity;
 
-		uint32_t *cells;
-		uint32_t cellCountX;
-		uint32_t cellCountY;
+		uint32_t *m_cells;
+		uint32_t m_cellCountX;
+		uint32_t m_cellCountY;
 
-		void add_outline_point(const Vector2 &point);
+	//	Outline();
 
-		void add_outline_contour(ContourRange *range);
+		void AddPoint(const Vector2 &point);
 
-		void outline_add_odd_point();
+		void AddContour(const ContourRange &range);
 
-		void outline_decompose(FT_Outline *outline);
+		void AddOddPoint();
 
-		bool is_cell_filled(const Rect &bbox) const;
+		void Decompose(FT_Outline *outline);
 
-		void copy_wipcell_values(Cell *wipCells);
+		bool IsCellFilled(const Rect &bbox) const;
 
-		void init_wipcells(Cell *wipCells);
+		void CopyCellValues(Cell *wipCells);
+
+		void InitCells(Cell *wipCells);
 
 
 
-		uint32_t outline_add_filled_line();
+		uint32_t AddFilledLine();
 
-		bool try_to_fit_in_cell_count();
+		bool TryFitCellCount();
 
-		void outline_make_cells();
+		void MakeCells();
 
-		void outline_subdivide();
+		void Subdivide();
 
-		void outline_fix_thin_lines();
+		void FixThinLines();
 
-		void outline_convert(FT_Outline *outline);
+		void Convert(FT_Outline *outline);
 
-		void outline_destroy();
+		void Destroy();
 
-		Rect outline_cbox() const;
+		Rect GetCbox() const;
 	};
 
 	template<typename T>

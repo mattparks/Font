@@ -60,7 +60,7 @@ namespace acid
 	                     const uint32_t &contourIndex)
 	{
 		bool ret = true;
-		uint32_t ucontourBegin = u.contours[contourIndex].begin;
+		uint32_t ucontourBegin = u.m_contours[contourIndex].begin;
 
 		if (to != std::numeric_limits<uint32_t>::max() && to != j)
 		{
@@ -100,10 +100,10 @@ namespace acid
 	bool Cell::FinishContour(const Outline &o, const Outline &u, const uint32_t &contourIndex, uint32_t &maxStartLength)
 	{
 		bool ret = true;
-		uint32_t ucontour_begin = u.contours[contourIndex].begin;
-		uint32_t ucontour_end = u.contours[contourIndex].end;
+		uint32_t ucontourBegin = u.m_contours[contourIndex].begin;
+		uint32_t ucontourEnd = u.m_contours[contourIndex].end;
 
-		if (to < ucontour_end)
+		if (to < ucontourEnd)
 		{
 			value = AddRange(value, from, to);
 
@@ -116,12 +116,12 @@ namespace acid
 			to = std::numeric_limits<uint32_t>::max();
 		}
 
-		assert(to == std::numeric_limits<uint32_t>::max() || to == ucontour_end);
+		assert(to == std::numeric_limits<uint32_t>::max() || to == ucontourEnd);
 		to = std::numeric_limits<uint32_t>::max();
 
 		if (from != std::numeric_limits<uint32_t>::max() && startLength != 0)
 		{
-			value = AddRange(value, from, ucontour_end + startLength * 2);
+			value = AddRange(value, from, ucontourEnd + startLength * 2);
 
 			if (!value)
 			{
@@ -135,7 +135,7 @@ namespace acid
 
 		if (from != std::numeric_limits<uint32_t>::max())
 		{
-			value = AddRange(value, from, ucontour_end);
+			value = AddRange(value, from, ucontourEnd);
 
 			if (!value)
 			{
@@ -147,7 +147,7 @@ namespace acid
 
 		if (startLength != 0)
 		{
-			value = AddRange(value, ucontour_begin, ucontour_begin + startLength * 2);
+			value = AddRange(value, ucontourBegin, ucontourBegin + startLength * 2);
 
 			if (!value)
 			{
@@ -164,35 +164,35 @@ namespace acid
 	bool Cell::CellsAddBezier(const Outline &o, const Outline &u, const uint32_t &i, const uint32_t &j,
 	                          const uint32_t &contourIndex, Cell *cells)
 	{
-		Rect bezier_bbox = bezier2_bbox(&o.points[i]);
+		Rect bezierBbox = bezier2_bbox(&o.m_points[i]);
 
-		float outline_bbox_w = o.bbox.maxX - o.bbox.minX;
-		float outline_bbox_h = o.bbox.maxY - o.bbox.minY;
+		float outlineBboxW = o.m_bbox.maxX - o.m_bbox.minX;
+		float outlineBboxH = o.m_bbox.maxY - o.m_bbox.minY;
 
-		auto min_x = static_cast<uint32_t>((bezier_bbox.minX - o.bbox.minX) / outline_bbox_w * o.cellCountX);
-		auto min_y = static_cast<uint32_t>((bezier_bbox.minY - o.bbox.minY) / outline_bbox_h * o.cellCountY);
-		auto max_x = static_cast<uint32_t>((bezier_bbox.maxX - o.bbox.minX) / outline_bbox_w * o.cellCountX);
-		auto max_y = static_cast<uint32_t>((bezier_bbox.maxY - o.bbox.minY) / outline_bbox_h * o.cellCountY);
+		auto minX = static_cast<uint32_t>((bezierBbox.minX - o.m_bbox.minX) / outlineBboxW * o.m_cellCountX);
+		auto minY = static_cast<uint32_t>((bezierBbox.minY - o.m_bbox.minY) / outlineBboxH * o.m_cellCountY);
+		auto maxX = static_cast<uint32_t>((bezierBbox.maxX - o.m_bbox.minX) / outlineBboxW * o.m_cellCountX);
+		auto maxY = static_cast<uint32_t>((bezierBbox.maxY - o.m_bbox.minY) / outlineBboxH * o.m_cellCountY);
 
-		if (max_x >= o.cellCountX)
+		if (maxX >= o.m_cellCountX)
 		{
-			max_x = o.cellCountX - 1;
+			maxX = o.m_cellCountX - 1;
 		}
 
-		if (max_y >= o.cellCountY)
+		if (maxY >= o.m_cellCountY)
 		{
-			max_y = o.cellCountY - 1;
+			maxY = o.m_cellCountY - 1;
 		}
 
 		bool ret = true;
 
-		for (uint32_t y = min_y; y <= max_y; y++)
+		for (uint32_t y = minY; y <= maxY; y++)
 		{
-			for (uint32_t x = min_x; x <= max_x; x++)
+			for (uint32_t x = minX; x <= maxX; x++)
 			{
-				Cell &cell = cells[y * o.cellCountX + x];
+				Cell &cell = cells[y * o.m_cellCountX + x];
 
-				if (bbox_bezier2_intersect(cell.bbox, &o.points[i]))
+				if (bbox_bezier2_intersect(cell.bbox, &o.m_points[i]))
 				{
 					ret &= cell.AddBezier(o, u, i, j, contourIndex);
 				}
@@ -207,11 +207,11 @@ namespace acid
 	{
 		bool ret = true;
 
-		for (uint32_t y = 0; y < o.cellCountY; y++)
+		for (uint32_t y = 0; y < o.m_cellCountY; y++)
 		{
-			for (uint32_t x = 0; x < o.cellCountX; x++)
+			for (uint32_t x = 0; x < o.m_cellCountX; x++)
 			{
-				Cell &cell = cells[y * o.cellCountX + x];
+				Cell &cell = cells[y * o.m_cellCountX + x];
 				ret &= cell.FinishContour(o, u, contourIndex, maxStartLength);
 			}
 		}
@@ -221,14 +221,14 @@ namespace acid
 
 	void Cell::CellsSetFilled(const Outline &u, Cell *cells, const uint32_t &filledCell)
 	{
-		for (uint32_t y = 0; y < u.cellCountY; y++)
+		for (uint32_t y = 0; y < u.m_cellCountY; y++)
 		{
-			for (uint32_t x = 0; x < u.cellCountX; x++)
+			for (uint32_t x = 0; x < u.m_cellCountX; x++)
 			{
-				uint32_t i = y * u.cellCountX + x;
+				uint32_t i = y * u.m_cellCountX + x;
 				Cell *cell = &cells[i];
 
-				if (cell->value == 0 && u.is_cell_filled(cell->bbox))
+				if (cell->value == 0 && u.IsCellFilled(cell->bbox))
 				{
 					cell->value = filledCell;
 				}
