@@ -34,13 +34,13 @@ namespace acid
 
 	static bool is_between_exclusive(const float &value, const float &min, const float &max);
 
-	static bool is_point_inside_bbox_exclusive(const Rect *bbox, const Vector2 &p);
+	static bool is_point_inside_bbox_exclusive(const Rect &bbox, const Vector2 &p);
 
 	static bool is_intersection_in_line_segment(const Vector2 &p1, const Vector2 &p2, const Vector2 &i);
 
-	static bool is_line_segment_intersecting_bbox(const Rect *bbox, const Vector2 &p1, const Vector2 &p2);
+	static bool is_line_segment_intersecting_bbox(const Rect &bbox, const Vector2 &p1, const Vector2 &p2);
 
-	bool bbox_bezier2_intersect(const Rect *bbox, const Vector2 bezier[3]);
+	bool bbox_bezier2_intersect(const Rect &bbox, const Vector2 bezier[3]);
 
 	float line_signed_distance(const Vector2 &a, const Vector2 &b, const Vector2 &p);
 

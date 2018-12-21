@@ -1,0 +1,10 @@
+.vs/*
+.idea/*
+.vscode/*
+.metadata/
+cmake-build-debug/*
+cmake-build-release/*
+Build/*
+Release/*
+
+.DS_Store

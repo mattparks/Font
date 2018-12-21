@@ -4,37 +4,38 @@
 #include <string.h>
 #include <vector>
 #include "Geometry.hpp"
+#include "Cell.hpp"
 
 namespace acid
 {
-	static void add_outline_point(Outline *o, const Vector2 &point)
+	void Outline::add_outline_point(const Vector2 &point)
 	{
-		if (o->pointCapacity == o->pointCount)
+		if (pointCapacity == pointCount)
 		{
-			dyn_array_grow((void **) &o->points, &o->pointCapacity, sizeof(Vector2));
+			dyn_array_grow((void **) &points, &pointCapacity, sizeof(Vector2));
 		}
 
-		o->points[o->pointCount] = point;
-		o->pointCount++;
+		points[pointCount] = point;
+		pointCount++;
 	}
 
-	static void add_outline_contour(Outline *o, ContourRange *range)
+	void Outline::add_outline_contour(ContourRange *range)
 	{
-		if (o->contourCapacity == o->contourCount)
+		if (contourCapacity == contourCount)
 		{
-			dyn_array_grow(&o->contours, &o->contourCapacity, sizeof(ContourRange));
+			dyn_array_grow(&contours, &contourCapacity, sizeof(ContourRange));
 		}
 
-		o->contours[o->contourCount] = *range;
-		o->contourCount++;
+		contours[contourCount] = *range;
+		contourCount++;
 	}
 
-	static void outline_add_odd_point(Outline *o)
+	void Outline::outline_add_odd_point()
 	{
-		if (o->pointCount % 2 != 0)
+		if (pointCount % 2 != 0)
 		{
-			Vector2 p = {o->bbox.minX, o->bbox.minY};
-			add_outline_point(o, p);
+			Vector2 p = {bbox.minX, bbox.minY};
+			add_outline_point(p);
 		}
 	}
 
@@ -46,65 +47,65 @@ namespace acid
 		);
 	}
 
-	static int move_to_func(const FT_Vector *to, Outline *o)
+	static int move_to_func(const FT_Vector *to, Outline &o)
 	{
 		Vector2 p = Vector2();
 
-		if (o->contourCount > 0)
+		if (o.contourCount > 0)
 		{
-			o->contours[o->contourCount - 1].end = o->pointCount - 1;
-			add_outline_point(o, p);
+			o.contours[o.contourCount - 1].end = o.pointCount - 1;
+			o.add_outline_point(p);
 		}
 
-		assert(o->pointCount % 2 == 0);
+		assert(o.pointCount % 2 == 0);
 
-		ContourRange range = {o->pointCount, std::numeric_limits<uint32_t>::max()};
-		add_outline_contour(o, &range);
+		ContourRange range = {o.pointCount, std::numeric_limits<uint32_t>::max()};
+		o.add_outline_contour(&range);
 
 		p = convert_point(to);
-		add_outline_point(o, p);
+		o.add_outline_point(p);
 		return 0;
 	}
 
-	static int line_to_func(const FT_Vector *to, Outline *o)
+	static int line_to_func(const FT_Vector *to, Outline &o)
 	{
-		uint32_t last = o->pointCount - 1;
+		uint32_t last = o.pointCount - 1;
 
 		Vector2 to_p;
 		to_p = convert_point(to);
-		Vector2 p = o->points[last].Lerp(to_p, 0.5f);
-		add_outline_point(o, p);
-		add_outline_point(o, to_p);
+		Vector2 p = o.points[last].Lerp(to_p, 0.5f);
+		o.add_outline_point(p);
+		o.add_outline_point(to_p);
 		return 0;
 	}
 
-	static int conic_to_func(const FT_Vector *control, const FT_Vector *to, Outline *o)
+	static int conic_to_func(const FT_Vector *control, const FT_Vector *to, Outline &o)
 	{
 		Vector2 p;
 		p = convert_point(control);
-		add_outline_point(o, p);
+		o.add_outline_point(p);
 
 		p = convert_point(to);
-		add_outline_point(o, p);
+		o.add_outline_point(p);
 		return 0;
 	}
 
-	static int cubic_to_func(const FT_Vector *control1, const FT_Vector *control2, const FT_Vector *to, Outline *o)
+	static int cubic_to_func(const FT_Vector *control1, const FT_Vector *control2, const FT_Vector *to, Outline &o)
 	{
 		return line_to_func(to, o);
 	}
 
-	void outline_decompose(FT_Outline *outline, Outline *o)
+	void Outline::outline_decompose(FT_Outline *outline)
 	{
-		memset(o, 0, sizeof(Outline));
+		memset(this, 0, sizeof(Outline));
 
 		FT_BBox outline_bbox;
 		FT_CHECK(FT_Outline_Get_BBox(outline, &outline_bbox));
 
-		o->bbox.minX = static_cast<float>(outline_bbox.xMin) / 64.0f;
-		o->bbox.minY = static_cast<float>(outline_bbox.yMin) / 64.0f;
-		o->bbox.maxX = static_cast<float>(outline_bbox.xMax) / 64.0f;
-		o->bbox.maxY = static_cast<float>(outline_bbox.yMax) / 64.0f;
+		bbox.minX = static_cast<float>(outline_bbox.xMin) / 64.0f;
+		bbox.minY = static_cast<float>(outline_bbox.yMin) / 64.0f;
+		bbox.maxX = static_cast<float>(outline_bbox.xMax) / 64.0f;
+		bbox.maxY = static_cast<float>(outline_bbox.yMax) / 64.0f;
 
 		FT_Outline_Funcs funcs = {};
 		funcs.move_to = reinterpret_cast<FT_Outline_MoveToFunc>(move_to_func);
@@ -112,83 +113,35 @@ namespace acid
 		funcs.conic_to = reinterpret_cast<FT_Outline_ConicToFunc>(conic_to_func);
 		funcs.cubic_to = reinterpret_cast<FT_Outline_CubicToFunc>(cubic_to_func);
 
-		FT_CHECK(FT_Outline_Decompose(outline, &funcs, o));
+		FT_CHECK(FT_Outline_Decompose(outline, &funcs, this));
 
-		if (o->contourCount > 0)
+		if (contourCount > 0)
 		{
-			o->contours[o->contourCount - 1].end = o->pointCount - 1;
+			contours[contourCount - 1].end = pointCount - 1;
 		}
 	}
 
-	static uint32_t cell_add_range(uint32_t cell, uint32_t from, uint32_t to)
-	{
-		assert(from % 2 == 0 && to % 2 == 0);
-
-		from /= 2;
-		to /= 2;
-
-		if (from >= std::numeric_limits<uint8_t>::max())
-		{
-			return 0;
-		}
-
-		if (to >= std::numeric_limits<uint8_t>::max())
-		{
-			return 0;
-		}
-
-		uint32_t length = to - from;
-
-		if (length <= 3 && (cell & 0x03) == 0)
-		{
-			cell |= from << 8;
-			cell |= length;
-			return cell;
-		}
-
-		if (length > 7)
-		{
-			return 0;
-		}
-
-		if ((cell & 0x1C) == 0)
-		{
-			cell |= from << 16;
-			cell |= length << 2;
-			return cell;
-		}
-
-		if ((cell & 0xE0) == 0)
-		{
-			cell |= from << 24;
-			cell |= length << 5;
-			return cell;
-		}
-
-		return 0;
-	}
-
-	static bool is_cell_filled(Outline *o, Rect *bbox)
+	bool Outline::is_cell_filled(const Rect &bbox) const
 	{
 		Vector2 p = {
-			(bbox->maxX + bbox->minX) / 2.0f,
-			(bbox->maxY + bbox->minY) / 2.0f,
+			(bbox.maxX + bbox.minX) / 2.0f,
+			(bbox.maxY + bbox.minY) / 2.0f,
 		};
 
 		float mindist = std::numeric_limits<float>::max();
 		float v = std::numeric_limits<float>::max();
 		uint32_t j = std::numeric_limits<uint32_t>::max();
 
-		for (uint32_t contour_index = 0; contour_index < o->contourCount; contour_index++)
+		for (uint32_t contour_index = 0; contour_index < contourCount; contour_index++)
 		{
-			uint32_t contour_begin = o->contours[contour_index].begin;
-			uint32_t contour_end = o->contours[contour_index].end;
+			uint32_t contour_begin = contours[contour_index].begin;
+			uint32_t contour_end = contours[contour_index].end;
 
 			for (uint32_t i = contour_begin; i < contour_end; i += 2)
 			{
-				Vector2 p0 = o->points[i];
-				Vector2 p1 = o->points[i + 1];
-				Vector2 p2 = o->points[i + 2];
+				Vector2 p0 = points[i];
+				Vector2 p1 = points[i + 1];
+				Vector2 p2 = points[i + 2];
 
 				float t = line_calculate_t(p0, p2, p);
 
@@ -203,8 +156,8 @@ namespace acid
 					if (udist >= mindist && i > contour_begin)
 					{
 						float lastd = i == contour_end - 2 && j == contour_begin
-						              ? line_signed_distance(p0, p2, o->points[contour_begin + 2])
-						              : line_signed_distance(p0, p2, o->points[i - 2]);
+						              ? line_signed_distance(p0, p2, points[contour_begin + 2])
+						              : line_signed_distance(p0, p2, points[i - 2]);
 
 						if (lastd < 0.0f)
 						{
@@ -229,440 +182,267 @@ namespace acid
 		return v > 0.0f;
 	}
 
-	static bool wipcell_add_bezier(Outline *o, Outline *u, uint32_t i, uint32_t j, uint32_t contour_index, WIPCell *cell)
+	void Outline::copy_wipcell_values(Cell *wipCells)
 	{
-		bool ret = true;
-		uint32_t ucontour_begin = u->contours[contour_index].begin;
+		cells = (uint32_t *) malloc(sizeof(uint32_t) * cellCountX * cellCountY);
 
-		if (cell->to != std::numeric_limits<uint32_t>::max() && cell->to != j)
+		for (uint32_t y = 0; y < cellCountY; y++)
 		{
-			assert(cell->to < j);
-
-			if (cell->from == ucontour_begin)
+			for (uint32_t x = 0; x < cellCountX; x++)
 			{
-				assert(cell->to % 2 == 0);
-				assert(cell->from % 2 == 0);
-
-				cell->startLength = (cell->to - cell->from) / 2;
-			} else
-			{
-				cell->value = cell_add_range(cell->value, cell->from, cell->to);
-
-				if (!cell->value)
-				{
-					ret = false;
-				}
-			}
-
-			cell->from = j;
-		} else
-		{
-			if (cell->from == std::numeric_limits<uint32_t>::max())
-			{
-				cell->from = j;
-			}
-		}
-
-		cell->to = j + 2;
-		return ret;
-	}
-
-	static bool
-	wipcell_finish_contour(Outline *o, Outline *u, uint32_t contour_index, WIPCell *cell, uint32_t *max_start_len)
-	{
-		bool ret = true;
-		uint32_t ucontour_begin = u->contours[contour_index].begin;
-		uint32_t ucontour_end = u->contours[contour_index].end;
-
-		if (cell->to < ucontour_end)
-		{
-			cell->value = cell_add_range(cell->value, cell->from, cell->to);
-
-			if (!cell->value)
-			{
-				ret = false;
-			}
-
-			cell->from = std::numeric_limits<uint32_t>::max();
-			cell->to = std::numeric_limits<uint32_t>::max();
-		}
-
-		assert(cell->to == std::numeric_limits<uint32_t>::max() || cell->to == ucontour_end);
-		cell->to = std::numeric_limits<uint32_t>::max();
-
-		if (cell->from != std::numeric_limits<uint32_t>::max() && cell->startLength != 0)
-		{
-			cell->value = cell_add_range(cell->value, cell->from, ucontour_end + cell->startLength * 2);
-
-			if (!cell->value)
-			{
-				ret = false;
-			}
-
-			*max_start_len = std::max(*max_start_len, cell->startLength);
-			cell->from = std::numeric_limits<uint32_t>::max();
-			cell->startLength = 0;
-		}
-
-		if (cell->from != std::numeric_limits<uint32_t>::max())
-		{
-			cell->value = cell_add_range(cell->value, cell->from, ucontour_end);
-
-			if (!cell->value)
-			{
-				ret = false;
-			}
-
-			cell->from = std::numeric_limits<uint32_t>::max();
-		}
-
-		if (cell->startLength != 0)
-		{
-			cell->value = cell_add_range(cell->value, ucontour_begin, ucontour_begin + cell->startLength * 2);
-
-			if (!cell->value)
-			{
-				ret = false;
-			}
-
-			cell->startLength = 0;
-		}
-
-		assert(cell->from == std::numeric_limits<uint32_t>::max() && cell->to == std::numeric_limits<uint32_t>::max());
-		return ret;
-	}
-
-	static bool for_each_wipcell_add_bezier(Outline *o, Outline *u, uint32_t i, uint32_t j, uint32_t contour_index, WIPCell *cells)
-	{
-		Rect bezier_bbox = bezier2_bbox(&o->points[i]);
-
-		float outline_bbox_w = o->bbox.maxX - o->bbox.minX;
-		float outline_bbox_h = o->bbox.maxY - o->bbox.minY;
-
-		auto min_x = static_cast<uint32_t>((bezier_bbox.minX - o->bbox.minX) / outline_bbox_w * o->cellCountX);
-		auto min_y = static_cast<uint32_t>((bezier_bbox.minY - o->bbox.minY) / outline_bbox_h * o->cellCountY);
-		auto max_x = static_cast<uint32_t>((bezier_bbox.maxX - o->bbox.minX) / outline_bbox_w * o->cellCountX);
-		auto max_y = static_cast<uint32_t>((bezier_bbox.maxY - o->bbox.minY) / outline_bbox_h * o->cellCountY);
-
-		if (max_x >= o->cellCountX)
-		{
-			max_x = o->cellCountX - 1;
-		}
-
-		if (max_y >= o->cellCountY)
-		{
-			max_y = o->cellCountY - 1;
-		}
-
-		bool ret = true;
-
-		for (uint32_t y = min_y; y <= max_y; y++)
-		{
-			for (uint32_t x = min_x; x <= max_x; x++)
-			{
-				WIPCell *cell = &cells[y * o->cellCountX + x];
-
-				if (bbox_bezier2_intersect(&cell->bbox, &o->points[i]))
-				{
-					ret &= wipcell_add_bezier(o, u, i, j, contour_index, cell);
-				}
-			}
-		}
-
-		return ret;
-	}
-
-	static bool for_each_wipcell_finish_contour(Outline *o, Outline *u, uint32_t contour_index, WIPCell *cells,
-	                                            uint32_t *max_start_len)
-	{
-		bool ret = true;
-
-		for (uint32_t y = 0; y < o->cellCountY; y++)
-		{
-			for (uint32_t x = 0; x < o->cellCountX; x++)
-			{
-				WIPCell *cell = &cells[y * o->cellCountX + x];
-				ret &= wipcell_finish_contour(o, u, contour_index, cell, max_start_len);
-			}
-		}
-
-		return ret;
-	}
-
-	static void copy_wipcell_values(Outline *u, WIPCell *cells)
-	{
-		u->cells = (uint32_t *) malloc(sizeof(uint32_t) * u->cellCountX * u->cellCountY);
-
-		for (uint32_t y = 0; y < u->cellCountY; y++)
-		{
-			for (uint32_t x = 0; x < u->cellCountX; x++)
-			{
-				uint32_t i = y * u->cellCountX + x;
-				u->cells[i] = cells[i].value;
+				uint32_t i = y * cellCountX + x;
+				cells[i] = wipCells[i].value;
 			}
 		}
 	}
 
-	static void init_wipcells(Outline *o, WIPCell *cells)
+	void Outline::init_wipcells(Cell *wipCells)
 	{
-		float w = o->bbox.maxX - o->bbox.minX;
-		float h = o->bbox.maxY - o->bbox.minY;
+		float w = bbox.maxX - bbox.minX;
+		float h = bbox.maxY - bbox.minY;
 
-		for (uint32_t y = 0; y < o->cellCountY; y++)
+		for (uint32_t y = 0; y < cellCountY; y++)
 		{
-			for (uint32_t x = 0; x < o->cellCountX; x++)
+			for (uint32_t x = 0; x < cellCountX; x++)
 			{
-				Rect bbox = {
-					o->bbox.minX + ((float) x / o->cellCountX) * w,
-					o->bbox.minY + ((float) y / o->cellCountY) * h,
-					o->bbox.minX + ((float) (x + 1) / o->cellCountX) * w,
-					o->bbox.minY + ((float) (y + 1) / o->cellCountY) * h,
+				Rect cbox = {
+					bbox.minX + ((float) x / cellCountX) * w,
+					bbox.minY + ((float) y / cellCountY) * h,
+					bbox.minX + ((float) (x + 1) / cellCountX) * w,
+					bbox.minY + ((float) (y + 1) / cellCountY) * h,
 				};
 
-				uint32_t i = y * o->cellCountX + x;
-				cells[i].bbox = bbox;
-				cells[i].from = std::numeric_limits<uint32_t>::max();
-				cells[i].to = std::numeric_limits<uint32_t>::max();
-				cells[i].value = 0;
-				cells[i].startLength = 0;
+				uint32_t i = y * cellCountX + x;
+				wipCells[i].bbox = cbox;
+				wipCells[i].from = std::numeric_limits<uint32_t>::max();
+				wipCells[i].to = std::numeric_limits<uint32_t>::max();
+				wipCells[i].value = 0;
+				wipCells[i].startLength = 0;
 			}
 		}
 	}
 
-	static uint32_t outline_add_filled_line(Outline *o)
+	uint32_t Outline::outline_add_filled_line()
 	{
-		outline_add_odd_point(o);
+		outline_add_odd_point();
 
-		uint32_t i = o->pointCount;
-		float y = o->bbox.maxY + 1000.0f;
-		Vector2 f0 = {o->bbox.minX, y};
-		Vector2 f1 = {o->bbox.minX + 10.0f, y};
-		Vector2 f2 = {o->bbox.minX + 20.0f, y};
-		add_outline_point(o, f0);
-		add_outline_point(o, f1);
-		add_outline_point(o, f2);
+		uint32_t i = pointCount;
+		float y = bbox.maxY + 1000.0f;
+		Vector2 f0 = {bbox.minX, y};
+		Vector2 f1 = {bbox.minX + 10.0f, y};
+		Vector2 f2 = {bbox.minX + 20.0f, y};
+		add_outline_point(f0);
+		add_outline_point(f1);
+		add_outline_point(f2);
 
 		return i;
 	}
 
-	static uint32_t make_cell_from_single_edge(uint32_t e)
+	static uint32_t make_cell_from_single_edge(const uint32_t &e)
 	{
 		assert(e % 2 == 0);
 		return e << 7 | 1;
 	}
 
-	static void set_filled_cells(Outline *u, WIPCell *cells, uint32_t filled_cell)
-	{
-		for (uint32_t y = 0; y < u->cellCountY; y++)
-		{
-			for (uint32_t x = 0; x < u->cellCountX; x++)
-			{
-				uint32_t i = y * u->cellCountX + x;
-				WIPCell *cell = &cells[i];
-
-				if (cell->value == 0 && is_cell_filled(u, &cell->bbox))
-				{
-					cell->value = filled_cell;
-				}
-			}
-		}
-	}
-
-	static bool try_to_fit_in_cell_count(Outline *o)
+	bool Outline::try_to_fit_in_cell_count()
 	{
 		bool ret = true;
 
-		auto cells = std::vector<WIPCell>(o->cellCountX * o->cellCountY);
-		init_wipcells(o, cells.data());
+		auto cells = std::vector<Cell>(cellCountX * cellCountY);
+		init_wipcells(cells.data());
 
 		Outline u = {};
-		u.bbox = o->bbox;
-		u.cellCountX = o->cellCountX;
-		u.cellCountY = o->cellCountY;
+		u.bbox = bbox;
+		u.cellCountX = cellCountX;
+		u.cellCountY = cellCountY;
 
-		for (uint32_t contour_index = 0; contour_index < o->contourCount; contour_index++)
+		for (uint32_t contour_index = 0; contour_index < contourCount; contour_index++)
 		{
-			uint32_t contour_begin = o->contours[contour_index].begin;
-			uint32_t contour_end = o->contours[contour_index].end;
+			uint32_t contour_begin = contours[contour_index].begin;
+			uint32_t contour_end = contours[contour_index].end;
 
-			outline_add_odd_point(&u);
+			u.outline_add_odd_point();
 
 			ContourRange urange = {u.pointCount, u.pointCount + contour_end - contour_begin};
-			add_outline_contour(&u, &urange);
+			u.add_outline_contour(&urange);
 
 			for (uint32_t i = contour_begin; i < contour_end; i += 2)
 			{
-				Vector2 p0 = o->points[i];
-				Vector2 p1 = o->points[i + 1];
+				Vector2 p0 = points[i];
+				Vector2 p1 = points[i + 1];
 
 				uint32_t j = u.pointCount;
-				add_outline_point(&u, p0);
-				add_outline_point(&u, p1);
+				u.add_outline_point(p0);
+				u.add_outline_point(p1);
 
-				ret &= for_each_wipcell_add_bezier(o, &u, i, j, contour_index, cells.data());
+				ret &= Cell::CellsAddBezier(*this, u, i, j, contour_index, cells.data());
 			}
 
-			uint32_t max_start_len = 0;
-			ret &= for_each_wipcell_finish_contour(o, &u, contour_index, cells.data(), &max_start_len);
+			uint32_t maxStartLength = 0;
+			ret &= Cell::CellsFinishContour(*this, u, contour_index, cells.data(), maxStartLength);
 
-			uint32_t continuation_end = contour_begin + max_start_len * 2;
+			uint32_t continuation_end = contour_begin + maxStartLength * 2;
 
 			for (uint32_t i = contour_begin; i < continuation_end; i += 2)
 			{
-				add_outline_point(&u, o->points[i]);
-				add_outline_point(&u, o->points[i + 1]);
+				u.add_outline_point(points[i]);
+				u.add_outline_point(points[i + 1]);
 			}
 
-			Vector2 plast = o->points[continuation_end];
-			add_outline_point(&u, plast);
+			Vector2 plast = points[continuation_end];
+			u.add_outline_point(plast);
 		}
 
 		if (!ret)
 		{
-			outline_destroy(&u);
+			u.outline_destroy();
 			return ret;
 		}
 
-		uint32_t filled_line = outline_add_filled_line(&u);
+		uint32_t filled_line = u.outline_add_filled_line();
 		uint32_t filled_cell = make_cell_from_single_edge(filled_line);
-		set_filled_cells(&u, cells.data(), filled_cell);
+		Cell::CellsSetFilled(u, cells.data(), filled_cell);
 
-		copy_wipcell_values(&u, cells.data());
+		u.copy_wipcell_values(cells.data());
 
-		outline_destroy(o);
-		*o = u;
+		outline_destroy();
+		*this = u;
 		return ret;
 	}
 
-	static uint32_t uint32_to_pow2(uint32_t v)
+	static uint32_t uint32_to_pow2(const uint32_t &v)
 	{
-		v--;
-		v |= v >> 1;
-		v |= v >> 2;
-		v |= v >> 4;
-		v |= v >> 8;
-		v |= v >> 16;
-		v++;
-		return v;
+		uint32_t r = v;
+		r--;
+		r |= r >> 1;
+		r |= r >> 2;
+		r |= r >> 4;
+		r |= r >> 8;
+		r |= r >> 16;
+		r++;
+		return r;
 	}
 
-	void outline_make_cells(Outline *o)
+	void Outline::outline_make_cells()
 	{
-		if (o->pointCount > OUTLINE_MAX_POINTS)
+		if (pointCount > OUTLINE_MAX_POINTS)
 		{
 			return;
 		}
 
-		float w = o->bbox.maxX - o->bbox.minX;
-		float h = o->bbox.maxY - o->bbox.minY;
+		float w = bbox.maxX - bbox.minX;
+		float h = bbox.maxY - bbox.minY;
 
-		uint32_t c = uint32_to_pow2((uint32_t) sqrtf(o->pointCount * 0.75f));
+		uint32_t c = uint32_to_pow2((uint32_t) sqrtf(pointCount * 0.75f));
 
-		o->cellCountX = c;
-		o->cellCountY = c;
+		cellCountX = c;
+		cellCountY = c;
 
 		if (h > w * 1.8f)
 		{
-			o->cellCountX /= 2;
+			cellCountX /= 2;
 		}
 
 		if (w > h * 1.8f)
 		{
-			o->cellCountY /= 2;
+			cellCountY /= 2;
 		}
 
 		while (true)
 		{
-			if (try_to_fit_in_cell_count(o))
+			if (try_to_fit_in_cell_count())
 			{
 				break;
 			}
 
-			if (o->cellCountX > 64 || o->cellCountY > 64)
+			if (cellCountX > 64 || cellCountY > 64)
 			{
-				o->cellCountX = 0;
-				o->cellCountY = 0;
+				cellCountX = 0;
+				cellCountY = 0;
 				return;
 			}
 
-			if (o->cellCountX == o->cellCountY)
+			if (cellCountX == cellCountY)
 			{
 				if (w > h)
 				{
-					o->cellCountX *= 2;
-				} else
-				{
-					o->cellCountY *= 2;
+					cellCountX *= 2;
 				}
-			} else
+				else
+				{
+					cellCountY *= 2;
+				}
+			}
+			else
 			{
-				if (o->cellCountX < o->cellCountY)
+				if (cellCountX < cellCountY)
 				{
-					o->cellCountX *= 2;
-				} else
+					cellCountX *= 2;
+				}
+				else
 				{
-					o->cellCountY *= 2;
+					cellCountY *= 2;
 				}
 			}
 		}
 	}
 
-	void outline_subdivide(Outline *o)
+	void Outline::outline_subdivide()
 	{
 		Outline u = {};
-		u.bbox = o->bbox;
+		u.bbox = bbox;
 
-		for (uint32_t contour_index = 0; contour_index < o->contourCount; contour_index++)
+		for (uint32_t contour_index = 0; contour_index < contourCount; contour_index++)
 		{
-			uint32_t contour_begin = o->contours[contour_index].begin;
-			uint32_t contour_end = o->contours[contour_index].end;
+			uint32_t contour_begin = contours[contour_index].begin;
+			uint32_t contour_end = contours[contour_index].end;
 
-			outline_add_odd_point(&u);
+			u.outline_add_odd_point();
 
 			ContourRange urange = {u.pointCount, std::numeric_limits<uint32_t>::max()};
-			add_outline_contour(&u, &urange);
+			u.add_outline_contour(&urange);
 
 			for (uint32_t i = contour_begin; i < contour_end; i += 2)
 			{
-				Vector2 p0 = o->points[i];
+				Vector2 p0 = points[i];
 
 				Vector2 newp[3];
-				bezier2_split_3p(newp, &o->points[i], 0.5f);
+				bezier2_split_3p(newp, &points[i], 0.5f);
 
-				add_outline_point(&u, p0);
-				add_outline_point(&u, newp[0]);
-				add_outline_point(&u, newp[1]);
-				add_outline_point(&u, newp[2]);
+				u.add_outline_point(p0);
+				u.add_outline_point(newp[0]);
+				u.add_outline_point(newp[1]);
+				u.add_outline_point(newp[2]);
 			}
 
 			u.contours[contour_index].end = u.pointCount;
-			add_outline_point(&u, o->points[contour_end]);
+			u.add_outline_point(points[contour_end]);
 		}
 
-		outline_destroy(o);
-		*o = u;
+		outline_destroy();
+		*this = u;
 	}
 
-	void outline_fix_thin_lines(Outline *o)
+	void Outline::outline_fix_thin_lines()
 	{
 		Outline u = {};
-		u.bbox = o->bbox;
+		u.bbox = bbox;
 
-		for (uint32_t contour_index = 0; contour_index < o->contourCount; contour_index++)
+		for (uint32_t contour_index = 0; contour_index < contourCount; contour_index++)
 		{
-			uint32_t contour_begin = o->contours[contour_index].begin;
-			uint32_t contour_end = o->contours[contour_index].end;
+			uint32_t contour_begin = contours[contour_index].begin;
+			uint32_t contour_end = contours[contour_index].end;
 
-			outline_add_odd_point(&u);
+			u.outline_add_odd_point();
 
 			ContourRange urange = {u.pointCount, std::numeric_limits<uint32_t>::max()};
-			add_outline_contour(&u, &urange);
+			u.add_outline_contour(&urange);
 
 			for (uint32_t i = contour_begin; i < contour_end; i += 2)
 			{
-				Vector2 p0 = o->points[i];
-				Vector2 p1 = o->points[i + 1];
-				Vector2 p2 = o->points[i + 2];
+				Vector2 p0 = points[i];
+				Vector2 p1 = points[i + 1];
+				Vector2 p2 = points[i + 2];
 
 				Vector2 mid = p0.Lerp(p2, 0.5f);
 				Vector2 midp1 = p1 - mid;
@@ -693,8 +473,8 @@ namespace acid
 						continue;
 					}
 
-					Vector2 q0 = o->points[j];
-					Vector2 q2 = o->points[j + 2];
+					Vector2 q0 = points[j];
+					Vector2 q2 = points[j + 2];
 
 					if (bezier2_line_is_intersecting(bezier, q0, q2))
 					{
@@ -705,84 +485,83 @@ namespace acid
 				if (subdivide)
 				{
 					Vector2 newp[3];
-					bezier2_split_3p(newp, &o->points[i], 0.5f);
+					bezier2_split_3p(newp, &points[i], 0.5f);
 
-					add_outline_point(&u, p0);
-					add_outline_point(&u, newp[0]);
-					add_outline_point(&u, newp[1]);
-					add_outline_point(&u, newp[2]);
-				} else
+					u.add_outline_point(p0);
+					u.add_outline_point(newp[0]);
+					u.add_outline_point(newp[1]);
+					u.add_outline_point(newp[2]);
+				}
+				else
 				{
-					add_outline_point(&u, p0);
-					add_outline_point(&u, p1);
+					u.add_outline_point(p0);
+					u.add_outline_point(p1);
 				}
 			}
 
 			u.contours[contour_index].end = u.pointCount;
-			add_outline_point(&u, o->points[contour_end]);
+			u.add_outline_point(points[contour_end]);
 		}
 
-		outline_destroy(o);
-		*o = u;
+		outline_destroy();
+		*this = u;
 	}
 
-	void outline_convert(FT_Outline *outline, Outline *o, char c)
+	void Outline::outline_convert(FT_Outline *outline)
 	{
-		if (c == '&')
-		{
-			printf("");
-		}
-
-		outline_decompose(outline, o);
-		outline_fix_thin_lines(o);
-		outline_make_cells(o);
+		outline_decompose(outline);
+		outline_fix_thin_lines();
+		outline_make_cells();
 	}
 
-	void outline_destroy(Outline *o)
+	void Outline::outline_destroy()
 	{
-		if (o->contours)
+		if (contours)
 		{
-			free(o->contours);
+			free(contours);
 		}
 
-		if (o->points)
+		if (points)
 		{
-			free(o->points);
+			free(points);
 		}
 
-		if (o->cells)
+		if (cells)
 		{
-			free(o->cells);
+			free(cells);
 		}
 
-		memset(o, 0, sizeof(Outline));
+		memset(this, 0, sizeof(Outline));
 	}
 
-	void outline_cbox(Outline *o, Rect *cbox)
+	Rect Outline::outline_cbox() const
 	{
-		if (o->pointCount == 0)
+		if (pointCount == 0)
 		{
-			return;
+			return {};
 		}
 
-		cbox->minX = o->points[0].m_x;
-		cbox->minY = o->points[0].m_y;
-		cbox->maxX = o->points[0].m_x;
-		cbox->maxY = o->points[0].m_y;
+		Rect cbox = {};
+		cbox.minX = points[0].m_x;
+		cbox.minY = points[0].m_y;
+		cbox.maxX = points[0].m_x;
+		cbox.maxY = points[0].m_y;
 
-		for (uint32_t i = 1; i < o->pointCount; i++)
+		for (uint32_t i = 1; i < pointCount; i++)
 		{
-			float x = o->points[i].m_x;
-			float y = o->points[i].m_y;
+			float x = points[i].m_x;
+			float y = points[i].m_y;
 
-			cbox->minX = std::min(cbox->minX, x);
-			cbox->minY = std::min(cbox->minY, y);
-			cbox->maxX = std::max(cbox->maxX, x);
-			cbox->maxY = std::max(cbox->maxY, y);
+			cbox.minX = std::min(cbox.minX, x);
+			cbox.minY = std::min(cbox.minY, y);
+			cbox.maxX = std::max(cbox.maxX, x);
+			cbox.maxY = std::max(cbox.maxY, y);
 		}
+
+		return cbox;
 	}
 
-	static uint16_t gen_u16_value(float x, float min, float max)
+	static uint16_t gen_u16_value(const float &x, const float &min, const float &max)
 	{
 		return static_cast<uint16_t>((x - min) / (max - min) * std::numeric_limits<uint16_t>::max());
 	}

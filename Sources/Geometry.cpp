@@ -76,9 +76,9 @@ namespace acid
 		return value > min && value < max;
 	}
 
-	static bool is_point_inside_bbox_exclusive(const Rect *bbox, const Vector2 &p)
+	static bool is_point_inside_bbox_exclusive(const Rect &bbox, const Vector2 &p)
 	{
-		return is_between_exclusive(p.m_x, bbox->minX, bbox->maxX) && is_between_exclusive(p.m_y, bbox->minY, bbox->maxY);
+		return is_between_exclusive(p.m_x, bbox.minX, bbox.maxX) && is_between_exclusive(p.m_y, bbox.minY, bbox.maxY);
 	}
 
 	static bool is_intersection_in_line_segment(const Vector2 &p1, const Vector2 &p2, const Vector2 &i)
@@ -90,7 +90,7 @@ namespace acid
 		return is_between(i.m_x, px_min, px_max) && is_between(i.m_y, py_min, py_max);
 	}
 
-	static bool is_line_segment_intersecting_bbox(const Rect *bbox, const Vector2 &p1, const Vector2 &p2)
+	static bool is_line_segment_intersecting_bbox(const Rect &bbox, const Vector2 &p1, const Vector2 &p2)
 	{
 		if (is_point_inside_bbox_exclusive(bbox, p1))
 		{
@@ -102,39 +102,39 @@ namespace acid
 			return true;
 		}
 
-		float x_top = line_horizontal_intersect(bbox->maxY, p1, p2);
-		float x_bottom = line_horizontal_intersect(bbox->minY, p1, p2);
-		float y_left = line_vertical_intersect(bbox->minX, p1, p2);
-		float y_right = line_vertical_intersect(bbox->maxX, p1, p2);
+		float x_top = line_horizontal_intersect(bbox.maxY, p1, p2);
+		float x_bottom = line_horizontal_intersect(bbox.minY, p1, p2);
+		float y_left = line_vertical_intersect(bbox.minX, p1, p2);
+		float y_right = line_vertical_intersect(bbox.maxX, p1, p2);
 
-		Vector2 top = {x_top, bbox->maxY};
-		Vector2 bottom = {x_bottom, bbox->minY};
-		Vector2 left = {bbox->minX, y_left};
-		Vector2 right = {bbox->maxX, y_right};
+		Vector2 top = {x_top, bbox.maxY};
+		Vector2 bottom = {x_bottom, bbox.minY};
+		Vector2 left = {bbox.minX, y_left};
+		Vector2 right = {bbox.maxX, y_right};
 
-		if (is_between(x_top, bbox->minX, bbox->maxX) &&
+		if (is_between(x_top, bbox.minX, bbox.maxX) &&
 		    is_intersection_in_line_segment(p1, p2, top))
 		{
 			return true;
 		}
 
-		if (is_between(x_bottom, bbox->minX, bbox->maxX) &&
+		if (is_between(x_bottom, bbox.minX, bbox.maxX) &&
 		    is_intersection_in_line_segment(p1, p2, bottom))
 		{
 			return true;
 		}
 
-		if (is_between(y_left, bbox->minY, bbox->maxY) &&
+		if (is_between(y_left, bbox.minY, bbox.maxY) &&
 		    is_intersection_in_line_segment(p1, p2, left))
 		{
 			return true;
 		}
 
-		return is_between(y_right, bbox->minY, bbox->maxY) &&
+		return is_between(y_right, bbox.minY, bbox.maxY) &&
 		       is_intersection_in_line_segment(p1, p2, right);
 	}
 
-	bool bbox_bezier2_intersect(const Rect *bbox, const Vector2 bezier[3])
+	bool bbox_bezier2_intersect(const Rect &bbox, const Vector2 bezier[3])
 	{
 		if (is_point_inside_bbox_exclusive(bbox, bezier[0]))
 		{
@@ -146,10 +146,10 @@ namespace acid
 			return true;
 		}
 
-		Vector2 bl = {bbox->minX, bbox->minY};
-		Vector2 br = {bbox->maxX, bbox->minY};
-		Vector2 tl = {bbox->minX, bbox->maxY};
-		Vector2 tr = {bbox->maxX, bbox->maxY};
+		Vector2 bl = {bbox.minX, bbox.minY};
+		Vector2 br = {bbox.maxX, bbox.minY};
+		Vector2 tl = {bbox.minX, bbox.maxY};
+		Vector2 tr = {bbox.maxX, bbox.maxY};
 
 		return bezier2_line_is_intersecting(bezier, bl, br) ||
 		       bezier2_line_is_intersecting(bezier, br, tr) ||
@@ -261,7 +261,8 @@ namespace acid
 			if (deriv[0].m_x < deriv[1].m_x)
 			{
 				bbox.minX = std::min(bbox.minX, x);
-			} else
+			}
+			else
 			{
 				bbox.maxX = std::max(bbox.maxX, x);
 			}
@@ -274,7 +275,8 @@ namespace acid
 			if (deriv[0].m_y < deriv[1].m_y)
 			{
 				bbox.minY = std::min(bbox.minY, y);
-			} else
+			}
+			else
 			{
 				bbox.maxY = std::max(bbox.maxY, y);
 			}
