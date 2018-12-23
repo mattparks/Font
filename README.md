@@ -1,4 +1,4 @@
-# Font-Demo
+# Font Demo
 A application that demos Vulkan TTF font rendering using bezier curves. This project is C++17 adaptation of https://github.com/kocsis1david/font-demo.
 
 ## Screenshots

@@ -19,7 +19,7 @@ struct GlyphInfo
 
 layout (set = 0, binding = 0) buffer GlyphBuffer
 {
-	GlyphInfo glyphs[];
+	GlyphInfo glyphs[256];
 } glyph_buffer;
 
 layout(location = 0) in vec4 in_rect;

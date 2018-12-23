@@ -33,7 +33,7 @@ struct DeviceGlyphInfo
 	CellInfo cell_info;
 };
 
-class Renderer
+class Main
 {
 private:
 	uint32_t m_frame;
@@ -117,9 +117,9 @@ public:
 	static const uint32_t MAX_VISIBLE_GLYPHS;
 	static const uint32_t NUMBER_OF_GLYPHS;
 
-	Renderer(const uint32_t &width, const uint32_t &height);
+	Main(const uint32_t &width, const uint32_t &height);
 
-	~Renderer();
+	~Main();
 
 	void Run();
 
