@@ -12,13 +12,13 @@ namespace acid
 
 	RendererFonts2::RendererFonts2(const Pipeline::Stage &pipelineStage) :
 		RenderPipeline(pipelineStage),
-		m_pipeline(PipelineGraphics(pipelineStage, {"Shaders/Fonts2/Font.vert", "Shaders/Fonts2/Font.frag"}, {GetVertexInput()},
-			PipelineGraphics::Mode::Polygon, PipelineGraphics::Depth::None, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, false, {}))
-	//	m_descriptorSet(DescriptorsHandler()),
-	//	m_storageGlyphs(nullptr),
-	//	m_instanceBuffer(InstanceBuffer(MAX_VISIBLE_GLYPHS * sizeof(GlyphInstance)))
+		m_pipeline(PipelineGraphics(pipelineStage, {"Shaders/Fonts2/Font.vert", "Shaders/Fonts2/Font.frag"}, {GlyphInstance::GetVertexInput()},
+			PipelineGraphics::Mode::Polygon, PipelineGraphics::Depth::None, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, false, {})),
+		m_descriptorSet(DescriptorsHandler()),
+		m_storageGlyphs(nullptr),
+		m_instanceBuffer(InstanceBuffer(MAX_VISIBLE_GLYPHS * sizeof(GlyphInstance)))
 	{
-		Log::Out("%s\n", m_pipeline.GetShaderProgram()->ToString().c_str());
+	//	Log::Out("%s\n", m_pipeline.GetShaderProgram()->ToString().c_str());
 
 	//	std::string filename = "Alice-Regular.ttf";
 	//	std::string filename = "marediv.ttf";
@@ -50,19 +50,12 @@ namespace acid
 	//	std::string filename = "Roboto-Thin.ttf";
 	//	std::string filename = "Roboto-ThinItalic.ttf";
 		LoadFont("Resources/Game/Fonts/" + filename);
-		CreateStorageBuffer();
-		CreateInstanceBuffer();
-		CreateDescriptorSet();
 	}
 
 	void RendererFonts2::Render(const CommandBuffer &commandBuffer)
 	{
-		auto logicalDevice = Renderer::Get()->GetLogicalDevice();
-
-		glyphInstanceCount = 0;
-	//	m_instanceBuffer.Map(reinterpret_cast<void **>(&glyphInstances));
-		uint32_t size = MAX_VISIBLE_GLYPHS * sizeof(GlyphInstance);
-		Renderer::CheckVk(vkMapMemory(logicalDevice->GetLogicalDevice(), instanceStagingBufferMemory, 0, size, 0, reinterpret_cast<void **>(&glyphInstances)));
+		m_glyphInstanceCount = 0;
+		m_instanceBuffer.Map(reinterpret_cast<void **>(&m_glyphInstances));
 
 		static std::vector<std::wstring> lines = {
 			L"Hello world, Привет мир, schön! 0123456789 #$%^*@&( []{} «»½¼±¶§",
@@ -110,43 +103,16 @@ namespace acid
 		}
 
 		AppendText(5.0f, 25.0f, 0.02f, "Frame Time: " + String::To(Engine::Get()->GetDelta().AsMilliseconds()) + "ms", Colour::Red);
-		AppendText(5.0f, 55.0f, 0.02f, "Fps: " + String::To(1.0f / Engine::Get()->GetDelta().AsSeconds()), Colour::Green);
+		AppendText(5.0f, 55.0f, 0.02f, "Fps: " + String::To<uint32_t>(1.0f / Engine::Get()->GetDelta().AsSeconds()), Colour::Green);
 
-	//	m_instanceBuffer.Unmap(commandBuffer);
-		{
-			vkUnmapMemory(logicalDevice->GetLogicalDevice(), instanceStagingBufferMemory);
-
-			VkBufferMemoryBarrier barrier = {};
-			barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-			barrier.srcAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.buffer = instanceBuffer;
-			barrier.offset = 0;
-			barrier.size = size;
-
-			vkCmdPipelineBarrier(commandBuffer.GetCommandBuffer(), VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-			                     0, 0, nullptr, 1, &barrier, 0, nullptr);
-
-			VkBufferCopy copy = {};
-			copy.srcOffset = 0;
-			copy.dstOffset = 0;
-			copy.size = size;
-
-			vkCmdCopyBuffer(commandBuffer.GetCommandBuffer(), instanceStagingBuffer, instanceBuffer, 1, &copy);
-
-			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-
-			vkCmdPipelineBarrier(commandBuffer.GetCommandBuffer(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-			                     0, 0, nullptr, 1, &barrier, 0, nullptr);
-		}
+		m_instanceBuffer.Unmap();
 
 		m_pipeline.BindPipeline(commandBuffer);
 
 		// Updates descriptors.
-		/*m_descriptorSet.Push("GlyphBuffer", *m_storageGlyphs, OffsetSize(glyphInfoOffset, glyphInfoSize));
-		m_descriptorSet.Push("CellBuffer", *m_storageGlyphs, OffsetSize(glyphCellsOffset, glyphCellsSize));
-		m_descriptorSet.Push("PointBuffer", *m_storageGlyphs, OffsetSize(glyphPointsOffset, glyphPointsSize));
+		m_descriptorSet.Push("GlyphBuffer", *m_storageGlyphs, OffsetSize(m_glyphInfoOffset, m_glyphInfoSize));
+		m_descriptorSet.Push("CellBuffer", *m_storageGlyphs, OffsetSize(m_glyphCellsOffset, m_glyphCellsSize));
+		m_descriptorSet.Push("PointBuffer", *m_storageGlyphs, OffsetSize(m_glyphPointsOffset, m_glyphPointsSize));
 		bool updateSuccess = m_descriptorSet.Update(m_pipeline);
 
 		if (!updateSuccess)
@@ -155,22 +121,14 @@ namespace acid
 		}
 
 		// Draws the object.
-		m_descriptorSet.BindDescriptor(commandBuffer, m_pipeline);*/
-
-		vkCmdBindDescriptorSets(commandBuffer.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.GetPipelineLayout(), 0, 1,
-			&descriptorSet, 0, nullptr);
-		
-	//	VkDeviceSize offsets[] = {0};
-	//	vkCmdBindVertexBuffers(commandBuffer.GetCommandBuffer(), 0, 1, &m_instanceBuffer.GetBuffer(), offsets);
-	//	vkCmdDraw(commandBuffer.GetCommandBuffer(), 4, glyphInstanceCount, 0, 0);
+		m_descriptorSet.BindDescriptor(commandBuffer, m_pipeline);
 
 		VkDeviceSize offsets[] = {0};
-		vkCmdBindVertexBuffers(commandBuffer.GetCommandBuffer(), 0, 1, &instanceBuffer, offsets);
-		vkCmdDraw(commandBuffer.GetCommandBuffer(), 4, glyphInstanceCount, 0, 0);
+		vkCmdBindVertexBuffers(commandBuffer.GetCommandBuffer(), 0, 1, &m_instanceBuffer.GetBuffer(), offsets);
+		vkCmdDraw(commandBuffer.GetCommandBuffer(), 4, m_glyphInstanceCount, 0, 0);
 	}
 
-
-	Shader::VertexInput RendererFonts2::GetVertexInput(const uint32_t &binding)
+	Shader::VertexInput RendererFonts2::GlyphInstance::GetVertexInput(const uint32_t &binding)
 	{
 		std::vector<VkVertexInputBindingDescription> bindingDescriptions(1);
 
@@ -228,8 +186,8 @@ namespace acid
 		uint32_t totalCells = 0;
 
 		uint32_t glyphCount = face->num_glyphs;
-		charmap = std::map<wchar_t, uint32_t>();
-		glyphInfos = std::vector<HostGlyphInfo>(glyphCount);
+		m_charmap = std::map<wchar_t, uint32_t>();
+		m_glyphInfos = std::vector<HostGlyphInfo>(glyphCount);
 		std::vector<Outline> outlines(glyphCount);
 
 	//	Log::Out("Glyph Count: %i\n", glyphCount);
@@ -243,8 +201,8 @@ namespace acid
 			FT_CHECK(FT_Load_Glyph(face, glyphIndex, FT_LOAD_NO_HINTING));
 		//	Log::Out("%i(%i) = %c\n", i, glyphIndex, charcode);
 
-			charmap.emplace(charcode, i);
-			HostGlyphInfo *hgi = &glyphInfos[i];
+			m_charmap.emplace(charcode, i);
+			HostGlyphInfo *hgi = &m_glyphInfos[i];
 			Outline *o = &outlines[i];
 
 			OutlineConvert(&face->glyph->outline, o);
@@ -259,29 +217,29 @@ namespace acid
 			i++;
 		}
 
-		glyphInfoSize = sizeof(DeviceGlyphInfo) * glyphInfos.size();
-		glyphCellsSize = sizeof(uint32_t) * totalCells;
-		glyphPointsSize = sizeof(Vector2) * totalPoints;
+		m_glyphInfoSize = sizeof(DeviceGlyphInfo) * m_glyphInfos.size();
+		m_glyphCellsSize = sizeof(uint32_t) * totalCells;
+		m_glyphPointsSize = sizeof(Vector2) * totalPoints;
 
 		uint32_t alignment = physicalDevice->GetProperties().limits.minStorageBufferOffsetAlignment;
-		glyphInfoOffset = 0;
-		glyphCellsOffset = AlignUint32(glyphInfoSize, alignment);
-		glyphPointsOffset = AlignUint32(glyphInfoSize + glyphCellsSize, alignment);
+		m_glyphInfoOffset = 0;
+		m_glyphCellsOffset = AlignUint32(m_glyphInfoSize, alignment);
+		m_glyphPointsOffset = AlignUint32(m_glyphInfoSize + m_glyphCellsSize, alignment);
 
-		glyphDataSize = glyphPointsOffset + glyphPointsSize;
-		glyphData = std::make_unique<char[]>(glyphDataSize);
+		m_glyphDataSize = m_glyphPointsOffset + m_glyphPointsSize;
+		std::unique_ptr<char[]> glyphData(new char[m_glyphDataSize]);
 
-		auto deviceGlyphInfos = reinterpret_cast<DeviceGlyphInfo*>(glyphData.get() + glyphInfoOffset);
-		auto cells = reinterpret_cast<uint32_t*>(glyphData.get() + glyphCellsOffset);
-		auto points = reinterpret_cast<Vector2*>(glyphData.get() + glyphPointsOffset);
+		auto deviceGlyphInfos = reinterpret_cast<DeviceGlyphInfo*>(glyphData.get() + m_glyphInfoOffset);
+		auto cells = reinterpret_cast<uint32_t*>(glyphData.get() + m_glyphCellsOffset);
+		auto points = reinterpret_cast<Vector2*>(glyphData.get() + m_glyphPointsOffset);
 
 		uint32_t pointOffset = 0;
 		uint32_t cellOffset = 0;
 
-		for (uint32_t i = 0; i < glyphInfos.size(); i++)
+		for (uint32_t j = 0; j < m_glyphInfos.size(); j++)
 		{
-			Outline *o = &outlines[i];
-			DeviceGlyphInfo *dgi = &deviceGlyphInfos[i];
+			Outline *o = &outlines[j];
+			DeviceGlyphInfo *dgi = &deviceGlyphInfos[j];
 
 			dgi->cellInfo.cellCountX = o->cellCountX;
 			dgi->cellInfo.cellCountY = o->cellCountY;
@@ -303,189 +261,8 @@ namespace acid
 
 		FT_CHECK(FT_Done_Face(face));
 		FT_CHECK(FT_Done_FreeType(library));
-	}
 
-	uint32_t FindMemoryType(const uint32_t &typeBits, const VkMemoryPropertyFlags &flags)
-	{
-		auto physicalDevice = Renderer::Get()->GetPhysicalDevice();
-		auto memoryProperties = physicalDevice->GetMemoryProperties();
-
-		for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
-		{
-			if (typeBits & 1 << i)
-			{
-				VkMemoryPropertyFlags f = memoryProperties.memoryTypes[i].propertyFlags;
-
-				if ((f & flags) == flags)
-				{
-					return i;
-				}
-			}
-		}
-
-		return std::numeric_limits<uint32_t>::max();
-	}
-
-	VkDeviceMemory AllocRequiredMemory(VkMemoryRequirements *req, const VkMemoryPropertyFlags &flags)
-	{
-		auto logicalDevice = Renderer::Get()->GetLogicalDevice();
-
-		VkMemoryAllocateInfo memoryAllocateInfo = {};
-		memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		memoryAllocateInfo.allocationSize = req->size;
-		memoryAllocateInfo.memoryTypeIndex = FindMemoryType(req->memoryTypeBits, flags);
-
-		VkDeviceMemory memory;
-		Renderer::CheckVk(vkAllocateMemory(logicalDevice->GetLogicalDevice(), &memoryAllocateInfo, nullptr, &memory));
-		return memory;
-	}
-
-	void CreateBufferWithMemory(VkBufferCreateInfo *ci, const VkMemoryPropertyFlags &flags,
-	                            VkDeviceMemory *memory, VkBuffer *buffer)
-	{
-		auto logicalDevice = Renderer::Get()->GetLogicalDevice();
-
-		Renderer::CheckVk(vkCreateBuffer(logicalDevice->GetLogicalDevice(), ci, nullptr, buffer));
-
-		VkMemoryRequirements requirements;
-		vkGetBufferMemoryRequirements(logicalDevice->GetLogicalDevice(), *buffer, &requirements);
-
-		*memory = AllocRequiredMemory(&requirements, flags);
-		Renderer::CheckVk(vkBindBufferMemory(logicalDevice->GetLogicalDevice(), *buffer, *memory, 0));
-	}
-
-	static void CopyBuffer(const VkBuffer &srcBuffer, const VkBuffer &dstBuffer, const VkDeviceSize &size)
-	{
-		CommandBuffer commandBuffer = CommandBuffer();
-		VkBufferCopy copy = {0, 0, size};
-
-		vkCmdCopyBuffer(commandBuffer.GetCommandBuffer(), srcBuffer, dstBuffer, 1, &copy);
-		commandBuffer.End();
-		commandBuffer.SubmitIdle();
-	}
-
-	void StageBuffer(const VkBuffer &buffer, const void *data, const std::size_t &size)
-	{
-		auto logicalDevice = Renderer::Get()->GetLogicalDevice();
-
-		VkBufferCreateInfo stagingCreateInfo = {};
-		stagingCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		stagingCreateInfo.size = size;
-		stagingCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-		stagingCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	
-		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
-	
-		CreateBufferWithMemory(&stagingCreateInfo, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-		&stagingBufferMemory, &stagingBuffer);
-	
-		void *stagingBufferPtr;
-		Renderer::CheckVk(vkMapMemory(logicalDevice->GetLogicalDevice(), stagingBufferMemory, 0, stagingCreateInfo.size, 0, &stagingBufferPtr));
-	
-		memcpy(stagingBufferPtr, data, size);
-	
-		vkUnmapMemory(logicalDevice->GetLogicalDevice(), stagingBufferMemory);
-	
-		CopyBuffer(stagingBuffer, buffer, size);
-	
-		vkDestroyBuffer(logicalDevice->GetLogicalDevice(), stagingBuffer, nullptr);
-		vkFreeMemory(logicalDevice->GetLogicalDevice(), stagingBufferMemory, nullptr);
-	}
-
-	void RendererFonts2::CreateStorageBuffer()
-	{
-		VkBufferCreateInfo storageCreateInfo = {};
-		storageCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		storageCreateInfo.size = glyphDataSize;
-		storageCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-		storageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-		CreateBufferWithMemory(&storageCreateInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			&storageBufferMemory, &storageBuffer);
-
-		StageBuffer(storageBuffer, glyphData.get(), storageCreateInfo.size);
-
-		//	m_storageGlyphs = std::make_unique<StorageBuffer>(glyphDataSize);
-	//	m_storageGlyphs->Update(glyphData.get());
-		glyphData = nullptr;
-	}
-
-	void RendererFonts2::CreateInstanceBuffer()
-	{
-		VkBufferCreateInfo bufferCreateInfo = {};
-		bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferCreateInfo.size = MAX_VISIBLE_GLYPHS * sizeof(GlyphInstance);
-		bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-		bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-		CreateBufferWithMemory(&bufferCreateInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			&instanceBufferMemory, &instanceBuffer);
-
-		VkBufferCreateInfo stagingCreateInfo = {};
-		stagingCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		stagingCreateInfo.size = bufferCreateInfo.size;
-		stagingCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-		stagingCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-		CreateBufferWithMemory(&stagingCreateInfo, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-			&instanceStagingBufferMemory, &instanceStagingBuffer);
-	}
-
-	void RendererFonts2::CreateDescriptorSet()
-	{
-		auto logicalDevice = Renderer::Get()->GetLogicalDevice();
-
-		VkDescriptorSetAllocateInfo setAllocateInfo = {};
-		setAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		setAllocateInfo.descriptorPool = m_pipeline.GetDescriptorPool();
-		setAllocateInfo.descriptorSetCount = 1;
-		setAllocateInfo.pSetLayouts = &m_pipeline.GetDescriptorSetLayout();
-
-		Renderer::CheckVk(vkAllocateDescriptorSets(logicalDevice->GetLogicalDevice(), &setAllocateInfo, &descriptorSet));
-
-		VkDescriptorBufferInfo glyphInfo = {};
-		glyphInfo.buffer = storageBuffer;
-		glyphInfo.offset = glyphInfoOffset;
-		glyphInfo.range = glyphInfoSize;
-
-		VkDescriptorBufferInfo cellsInfo = {};
-		cellsInfo.buffer = storageBuffer;
-		cellsInfo.offset = glyphCellsOffset;
-		cellsInfo.range = glyphCellsSize;
-
-		VkDescriptorBufferInfo pointsInfo = {};
-		pointsInfo.buffer = storageBuffer;
-		pointsInfo.offset = glyphPointsOffset;
-		pointsInfo.range = glyphPointsSize;
-
-		std::array<VkWriteDescriptorSet, 3> writes = {};
-
-		writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writes[0].dstSet = descriptorSet;
-		writes[0].dstBinding = 0;
-		writes[0].dstArrayElement = 0;
-		writes[0].descriptorCount = 1;
-		writes[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		writes[0].pBufferInfo = &glyphInfo;
-
-		writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writes[1].dstSet = descriptorSet;
-		writes[1].dstBinding = 1;
-		writes[1].dstArrayElement = 0;
-		writes[1].descriptorCount = 1;
-		writes[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		writes[1].pBufferInfo = &cellsInfo;
-
-		writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writes[2].dstSet = descriptorSet;
-		writes[2].dstBinding = 2;
-		writes[2].dstArrayElement = 0;
-		writes[2].descriptorCount = 1;
-		writes[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		writes[2].pBufferInfo = &pointsInfo;
-
-		vkUpdateDescriptorSets(logicalDevice->GetLogicalDevice(), writes.size(), writes.data(), 0, nullptr);
+		m_storageGlyphs = std::make_unique<StorageBuffer>(m_glyphDataSize, glyphData.get());
 	}
 
 	void RendererFonts2::AppendText(const float &x, const float &y, const float &scale, const std::wstring &text, const Colour &colour)
@@ -495,14 +272,14 @@ namespace acid
 
 		for (const auto &c : text)
 		{
-			if (glyphInstanceCount >= MAX_VISIBLE_GLYPHS)
+			if (m_glyphInstanceCount >= MAX_VISIBLE_GLYPHS)
 			{
 				break;
 			}
 
-			uint32_t glyphIndex = charmap[c];
-			HostGlyphInfo *gi = &glyphInfos[glyphIndex];
-			GlyphInstance *inst = &glyphInstances[glyphInstanceCount];
+			uint32_t glyphIndex = m_charmap[c];
+			HostGlyphInfo *gi = &m_glyphInfos[glyphIndex];
+			GlyphInstance *inst = &m_glyphInstances[m_glyphInstanceCount];
 
 			inst->rect.minX = (localX + gi->bbox.minX * scale) / (extent.m_x / 2.0f) - 1.0f;
 			inst->rect.minY = (y - gi->bbox.minY * scale) / (extent.m_y / 2.0f) - 1.0f;
@@ -516,7 +293,7 @@ namespace acid
 				inst->sharpness = scale;
 				inst->colour = colour;
 
-				glyphInstanceCount++;
+				m_glyphInstanceCount++;
 			}
 
 			localX += gi->advance * scale;

@@ -34,6 +34,8 @@ namespace acid
 			uint32_t glyphIndex;
 			float sharpness;
 			Colour colour;
+
+			static Shader::VertexInput GetVertexInput(const uint32_t &binding = 0);
 		};
 
 		struct HostGlyphInfo
@@ -49,43 +51,28 @@ namespace acid
 			CellInfo cellInfo;
 		};
 
-		static Shader::VertexInput GetVertexInput(const uint32_t &binding = 0);
 		static uint32_t AlignUint32(const uint32_t &value, const uint32_t &alignment);
 		void LoadFont(const std::string &filename);
-		void CreateStorageBuffer();
-		void CreateInstanceBuffer();
-		void CreateDescriptorSet();
 		void AppendText(const float &x, const float &y, const float &scale, const std::wstring &text, const Colour &colour);
 		void AppendText(const float &x, const float &y, const float &scale, const std::string &text, const Colour &colour);
 
 		PipelineGraphics m_pipeline;
-	//	DescriptorsHandler m_descriptorSet;
-	//	std::unique_ptr<StorageBuffer> m_storageGlyphs;
-	//	InstanceBuffer m_instanceBuffer;
+		DescriptorsHandler m_descriptorSet;
+		std::unique_ptr<StorageBuffer> m_storageGlyphs;
+		InstanceBuffer m_instanceBuffer;
 
-		std::map<wchar_t, uint32_t> charmap;
-		std::vector<HostGlyphInfo> glyphInfos;
+		std::map<wchar_t, uint32_t> m_charmap;
+		std::vector<HostGlyphInfo> m_glyphInfos;
 
-		std::unique_ptr<char[]> glyphData;
-		uint32_t glyphDataSize;
-		uint32_t glyphInfoSize;
-		uint32_t glyphCellsSize;
-		uint32_t glyphPointsSize;
-		uint32_t glyphInfoOffset;
-		uint32_t glyphCellsOffset;
-		uint32_t glyphPointsOffset;
+		uint32_t m_glyphDataSize;
+		uint32_t m_glyphInfoSize;
+		uint32_t m_glyphCellsSize;
+		uint32_t m_glyphPointsSize;
+		uint32_t m_glyphInfoOffset;
+		uint32_t m_glyphCellsOffset;
+		uint32_t m_glyphPointsOffset;
 
-		GlyphInstance *glyphInstances;
-		uint32_t glyphInstanceCount;
-
-		VkDeviceMemory storageBufferMemory;
-		VkBuffer storageBuffer;
-
-		VkDeviceMemory instanceBufferMemory;
-		VkBuffer instanceBuffer;
-		VkDeviceMemory instanceStagingBufferMemory;
-		VkBuffer instanceStagingBuffer;
-
-		VkDescriptorSet descriptorSet;
+		GlyphInstance *m_glyphInstances;
+		uint32_t m_glyphInstanceCount;
 	};
 }

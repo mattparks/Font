@@ -11,7 +11,6 @@
 #include "MainRenderer.hpp"
 #include "Scenes/Scene1.hpp"
 
-#if 1
 int main(int argc, char **argv)
 {
 	using namespace test;
@@ -28,7 +27,6 @@ int main(int argc, char **argv)
 	std::cin.get();
 	return exitCode;
 }
-#endif
 
 namespace test
 {
