@@ -1,8 +1,8 @@
-# Font Demo
-A application that demos Vulkan TTF font rendering using bezier curves. This project is C++17 adaptation of https://github.com/kocsis1david/font-demo.
+# Acid Font
+A application that demos Vulkan TTF font rendering using bezier curves in [Acid](https://github.com/Equilibrium-Games/Acid). This project is C++17 adaptation of https://github.com/kocsis1david/font-demo.
 
 ## Screenshots
-<img src="https://raw.githubusercontent.com/mattparks/Font-Demo/master/Documents/image1.png" alt="Image1" width="600px">
+<img src="https://raw.githubusercontent.com/mattparks/Acid-Font/master/Documents/image1.png" alt="Image1" width="600px">
 
 # Compiling
 Once cloned run `git submodule update --init --recursive` in the directory to update the submodules. All platforms depend on [CMake](https://cmake.org/download) to generate IDE/make files.

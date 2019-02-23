@@ -1,6 +1,5 @@
 .vs/*
 .idea/*
-.vscode/*
 .metadata/
 cmake-build-debug/*
 cmake-build-release/*
