@@ -1,4 +1,4 @@
-﻿#if 1
+﻿#if 0
 #include <memory>
 #include <array>
 #include <cassert>
@@ -236,18 +236,18 @@ static void CreateInstance(Render *r)
 	instanceCreateInfo.enabledExtensionCount = requiredInstanceExtensionCount;
 	instanceCreateInfo.ppEnabledExtensionNames = requiredInstanceExtensions;
 
-	VK_CHECK(vkCreateInstance(&instanceCreateInfo, NULL, &r->instance));
+	VK_CHECK(vkCreateInstance(&instanceCreateInfo, nullptr, &r->instance));
 }
 
 static void CreateSurface(Render *r)
 {
-	VK_CHECK(glfwCreateWindowSurface(r->instance, r->window, NULL, &r->surface));
+	VK_CHECK(glfwCreateWindowSurface(r->instance, r->window, nullptr, &r->surface));
 }
 
 static void PickPhysicalDevice(Render *r)
 {
 	uint32_t physicalDeviceCount;
-	VK_CHECK(vkEnumeratePhysicalDevices(r->instance, &physicalDeviceCount, NULL));
+	VK_CHECK(vkEnumeratePhysicalDevices(r->instance, &physicalDeviceCount, nullptr));
 	assert(physicalDeviceCount > 0);
 
 	std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
@@ -283,7 +283,7 @@ static void CreateDevice(Render *r)
 		deviceCreateInfo.pQueueCreateInfos = &queue_info;
 		deviceCreateInfo.queueCreateInfoCount = 1;
 
-		VK_CHECK(vkCreateDevice(r->physicalDevice, &deviceCreateInfo, NULL, &r->device));
+		VK_CHECK(vkCreateDevice(r->physicalDevice, &deviceCreateInfo, nullptr, &r->device));
 	}
 	else
 	{
@@ -306,7 +306,7 @@ static void CreateDevice(Render *r)
 		deviceCreateInfo.queueCreateInfoCount = queueCreateInfos.size();
 		deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
 
-		VK_CHECK(vkCreateDevice(r->physicalDevice, &deviceCreateInfo, NULL, &r->device));
+		VK_CHECK(vkCreateDevice(r->physicalDevice, &deviceCreateInfo, nullptr, &r->device));
 	}
 
 	vkGetDeviceQueue(r->device, r->queueFamilyGraphics, 0, &r->queueGraphics);
@@ -363,7 +363,7 @@ static void FindQueueFamilies(Render *r)
 static void ChooseSurfaceFormat(Render *r)
 {
 	uint32_t formatCount;
-	VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(r->physicalDevice, r->surface, &formatCount, NULL));
+	VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(r->physicalDevice, r->surface, &formatCount, nullptr));
 
 	assert(formatCount > 0);
 
@@ -380,7 +380,7 @@ static void ChooseSurfaceFormat(Render *r)
 static void ChoosePresentMode(Render *r)
 {
 	uint32_t presentModeCount;
-	VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(r->physicalDevice, r->surface, &presentModeCount, NULL));
+	VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(r->physicalDevice, r->surface, &presentModeCount, nullptr));
 	assert(presentModeCount > 0);
 	std::vector<VkPresentModeKHR> present_modes(presentModeCount);
 	VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(r->physicalDevice, r->surface, &presentModeCount, present_modes.data()));
@@ -463,14 +463,14 @@ static void CreateSwapChain(Render *r)
 		swapchainCreateInfo.pQueueFamilyIndices = nullptr;
 	}
 
-	VK_CHECK(vkCreateSwapchainKHR(r->device, &swapchainCreateInfo, NULL, &r->swapchain));
+	VK_CHECK(vkCreateSwapchainKHR(r->device, &swapchainCreateInfo, nullptr, &r->swapchain));
 
 	if (oldSwapchain)
 	{
 		vkDestroySwapchainKHR(r->device, oldSwapchain, nullptr);
 	}
 
-	VK_CHECK(vkGetSwapchainImagesKHR(r->device, r->swapchain, &r->imageCount, NULL));
+	VK_CHECK(vkGetSwapchainImagesKHR(r->device, r->swapchain, &r->imageCount, nullptr));
 
 	r->images.resize(r->imageCount);
 	VK_CHECK(vkGetSwapchainImagesKHR(r->device, r->swapchain, &r->imageCount, r->images.data()));
@@ -495,7 +495,7 @@ static void CreateImageViews(Render *r)
 		viewCreateInfo.subresourceRange.baseArrayLayer = 0;
 		viewCreateInfo.subresourceRange.layerCount = 1;
 
-		VK_CHECK(vkCreateImageView(r->device, &viewCreateInfo, NULL, &r->imageViews[i]));
+		VK_CHECK(vkCreateImageView(r->device, &viewCreateInfo, nullptr, &r->imageViews[i]));
 	}
 }
 
@@ -539,7 +539,7 @@ static void CreateRenderPass(Render *r)
 	renderPassCreateInfo.dependencyCount = 1;
 	renderPassCreateInfo.pDependencies = &subpassDependency;
 
-	VK_CHECK(vkCreateRenderPass(r->device, &renderPassCreateInfo, NULL, &r->renderPass));
+	VK_CHECK(vkCreateRenderPass(r->device, &renderPassCreateInfo, nullptr, &r->renderPass));
 }
 
 static void CreateFramebuffers(Render *r)
@@ -561,7 +561,7 @@ static void CreateFramebuffers(Render *r)
 		framebufferCreateInfo.height = r->swapchainExtent.height;
 		framebufferCreateInfo.layers = 1;
 
-		VK_CHECK(vkCreateFramebuffer(r->device, &framebufferCreateInfo, NULL, &r->framebuffers[i]));
+		VK_CHECK(vkCreateFramebuffer(r->device, &framebufferCreateInfo, nullptr, &r->framebuffers[i]));
 	}
 }
 
@@ -572,7 +572,7 @@ static void CreateCommandPool(Render *r)
 	commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	commandPoolCreateInfo.queueFamilyIndex = r->queueFamilyGraphics;
 
-	VK_CHECK(vkCreateCommandPool(r->device, &commandPoolCreateInfo, NULL, &r->commandPool));
+	VK_CHECK(vkCreateCommandPool(r->device, &commandPoolCreateInfo, nullptr, &r->commandPool));
 }
 
 static void BeginText(Render *r)
@@ -733,7 +733,7 @@ static void RecordCommandBuffer(Render *r)
 	VkDeviceSize offsets[] = {0};
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &r->instanceBuffer, offsets);
 
-	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,r->pipelineLayout, 0, 1, 
+	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, r->pipelineLayout, 0, 1,
 		&r->descriptorSet, 0, nullptr);
 
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, r->pipeline);
@@ -762,7 +762,7 @@ static void CreateCommandBufferFence(Render *r)
 	fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	VK_CHECK(vkCreateFence(r->device, &fenceCreateInfo, NULL, &r->commandBufferFence));
+	VK_CHECK(vkCreateFence(r->device, &fenceCreateInfo, nullptr, &r->commandBufferFence));
 }
 
 static void CreateSemaphores(Render *r)
@@ -770,8 +770,8 @@ static void CreateSemaphores(Render *r)
 	VkSemaphoreCreateInfo semaphoreCreateInfo = {};
 	semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-	VK_CHECK(vkCreateSemaphore(r->device, &semaphoreCreateInfo, NULL, &r->imageAvailableSemaphore));
-	VK_CHECK(vkCreateSemaphore(r->device, &semaphoreCreateInfo, NULL, &r->renderFinishedSemaphore));
+	VK_CHECK(vkCreateSemaphore(r->device, &semaphoreCreateInfo, nullptr, &r->imageAvailableSemaphore));
+	VK_CHECK(vkCreateSemaphore(r->device, &semaphoreCreateInfo, nullptr, &r->renderFinishedSemaphore));
 }
 
 static VkShaderModule LoadShaderModule(const VkDevice &device, const char *path)
@@ -791,7 +791,7 @@ static VkShaderModule LoadShaderModule(const VkDevice &device, const char *path)
 	moduleCreateInfo.pCode = code.data();
 
 	VkShaderModule ret;
-	VK_CHECK(vkCreateShaderModule(device, &moduleCreateInfo, NULL, &ret));
+	VK_CHECK(vkCreateShaderModule(device, &moduleCreateInfo, nullptr, &ret));
 	return ret;
 }
 
@@ -822,21 +822,21 @@ static void CreateLayout(Render *r)
 	descriptorLayoutCreateInfo.bindingCount = bindings.size();
 	descriptorLayoutCreateInfo.pBindings = bindings.data();
 
-	VK_CHECK(vkCreateDescriptorSetLayout(r->device, &descriptorLayoutCreateInfo, NULL, &r->setLayout));
+	VK_CHECK(vkCreateDescriptorSetLayout(r->device, &descriptorLayoutCreateInfo, nullptr, &r->setLayout));
 
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
 	pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutCreateInfo.setLayoutCount = 1;
 	pipelineLayoutCreateInfo.pSetLayouts = &r->setLayout;
 
-	VK_CHECK(vkCreatePipelineLayout(r->device, &pipelineLayoutCreateInfo, NULL, &r->pipelineLayout));
+	VK_CHECK(vkCreatePipelineLayout(r->device, &pipelineLayoutCreateInfo, nullptr, &r->pipelineLayout));
 }
 
-static uint32_t FindMemoryType(Render *r, const uint32_t &type_bits, const VkMemoryPropertyFlags &flags)
+static uint32_t FindMemoryType(Render *r, const uint32_t &typeBits, const VkMemoryPropertyFlags &flags)
 {
 	for (uint32_t i = 0; i < r->memoryProperties.memoryTypeCount; i++)
 	{
-		if (type_bits & 1 << i)
+		if (typeBits & 1 << i)
 		{
 			VkMemoryPropertyFlags f = r->memoryProperties.memoryTypes[i].propertyFlags;
 
@@ -858,14 +858,14 @@ static VkDeviceMemory AllocRequiredMemory(Render *r, VkMemoryRequirements *req, 
 	memoryAllocateInfo.memoryTypeIndex = FindMemoryType(r, req->memoryTypeBits, flags);
 
 	VkDeviceMemory memory;
-	VK_CHECK(vkAllocateMemory(r->device, &memoryAllocateInfo, NULL, &memory));
+	VK_CHECK(vkAllocateMemory(r->device, &memoryAllocateInfo, nullptr, &memory));
 	return memory;
 }
 
 static void CreateBufferWithMemory(Render *r, VkBufferCreateInfo *ci, const VkMemoryPropertyFlags &flags,
 	VkDeviceMemory *memory, VkBuffer *buffer)
 {
-	VK_CHECK(vkCreateBuffer(r->device, ci, NULL, buffer));
+	VK_CHECK(vkCreateBuffer(r->device, ci, nullptr, buffer));
 
 	VkMemoryRequirements requirements;
 	vkGetBufferMemoryRequirements(r->device, *buffer, &requirements);
@@ -994,7 +994,7 @@ static void CreateDescriptorPool(Render *r)
 	poolCreateInfo.poolSizeCount = 1;
 	poolCreateInfo.pPoolSizes = poolSizes;
 
-	VK_CHECK(vkCreateDescriptorPool(r->device, &poolCreateInfo, NULL, &r->descriptorPool));
+	VK_CHECK(vkCreateDescriptorPool(r->device, &poolCreateInfo, nullptr, &r->descriptorPool));
 }
 
 static void CreateDescriptorSet(Render *r)
@@ -1423,7 +1423,7 @@ int main(int argc, const char **args)
 //	std::string filename = "LobsterTwo-Bold.ttf";
 //	std::string filename = "LobsterTwo-BoldItalic.ttf";
 //	std::string filename = "LobsterTwo-Italic.ttf";
-	std::string filename = "LobsterTwo-Regular.ttf";
+//	std::string filename = "LobsterTwo-Regular.ttf";
 //	std::string filename = "OpenSans-Bold.ttf";
 //	std::string filename = "OpenSans-BoldItalic.ttf";
 //	std::string filename = "OpenSans-ExtraBold.ttf";
@@ -1441,7 +1441,7 @@ int main(int argc, const char **args)
 //	std::string filename = "Roboto-Italic.ttf";
 //	std::string filename = "Roboto-Light.ttf";
 //	std::string filename = "Roboto-LightItalic.ttf";
-//	std::string filename = "Roboto-Medium.ttf";
+	std::string filename = "Roboto-Medium.ttf";
 //	std::string filename = "Roboto-MediumItalic.ttf";
 //	std::string filename = "Roboto-Regular.ttf";
 //	std::string filename = "Roboto-Thin.ttf";

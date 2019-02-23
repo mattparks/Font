@@ -1,6 +1,7 @@
 #include "MainGame.hpp"
 
 #include <thread>
+#include <iostream>
 #include <Files/Files.hpp>
 #include <Files/FileSystem.hpp>
 #include <Devices/Mouse.hpp>
@@ -10,7 +11,7 @@
 #include "MainRenderer.hpp"
 #include "Scenes/Scene1.hpp"
 
-#if 0
+#if 1
 int main(int argc, char **argv)
 {
 	using namespace test;

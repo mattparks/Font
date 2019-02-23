@@ -30,8 +30,8 @@ namespace test
 		auto &rendererContainer = GetRendererContainer();
 		rendererContainer.Clear();
 
-		rendererContainer.Add<RendererGuis>(Pipeline::Stage(0, 0));
-		rendererContainer.Add<RendererFonts>(Pipeline::Stage(0, 0));
+	//	rendererContainer.Add<RendererGuis>(Pipeline::Stage(0, 0));
+	//	rendererContainer.Add<RendererFonts>(Pipeline::Stage(0, 0));
 		rendererContainer.Add<RendererFonts2>(Pipeline::Stage(0, 0));
 	}
 
