@@ -12,48 +12,76 @@ namespace acid
 
 	RendererFonts2::RendererFonts2(const Pipeline::Stage &pipelineStage) :
 		RenderPipeline(pipelineStage),
-		m_pipeline(PipelineGraphics(pipelineStage, {"Shaders/Fonts2/Font.vert", "Shaders/Fonts2/Font.frag"}, {GlyphInstance::GetVertexInput()},
+		m_pipeline(PipelineGraphics(pipelineStage, {"Shaders/Fonts2/Font.vert", "Shaders/Fonts2/Font.frag"}, {RendererFonts2::GetVertexInput()},
 			PipelineGraphics::Mode::Polygon, PipelineGraphics::Depth::None, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, false, {})),
 		m_descriptorSet(DescriptorsHandler()),
 		m_storageGlyphs(nullptr),
-		m_instanceBuffer(InstanceBuffer(MAX_VISIBLE_GLYPHS * sizeof(GlyphInstance)))
+		m_instanceBuffer(InstanceBuffer(MAX_VISIBLE_GLYPHS * sizeof(GlyphInstance))),
+		m_canvasScale(3.0f),
+		m_targetCanvasScale(m_canvasScale)
 	{
-	//	Log::Out("%s\n", m_pipeline.GetShaderProgram()->ToString().c_str());
+		Mouse::Get()->GetOnScroll() += [this](float offsetX, float offsetY)
+		{
+			m_targetCanvasScale *= std::pow(1.3f, offsetY);
+		};
 
-	//	std::string filename = "Alice-Regular.ttf";
-	//	std::string filename = "marediv.ttf";
-	//	std::string filename = "Lobster-Regular.ttf";
-	//	std::string filename = "LobsterTwo-Bold.ttf";
-	//	std::string filename = "LobsterTwo-BoldItalic.ttf";
-	//	std::string filename = "LobsterTwo-Italic.ttf";
-	//	std::string filename = "LobsterTwo-Regular.ttf";
-	//	std::string filename = "OpenSans-Bold.ttf";
-	//	std::string filename = "OpenSans-BoldItalic.ttf";
-	//	std::string filename = "OpenSans-ExtraBold.ttf";
-	//	std::string filename = "OpenSans-ExtraBoldItalic.ttf";
-	//	std::string filename = "OpenSans-Italic.ttf";
-	//	std::string filename = "OpenSans-Light.ttf";
-	//	std::string filename = "OpenSans-LightItalic.ttf";
-	//	std::string filename = "OpenSans-Regular.ttf";
-	//	std::string filename = "OpenSans-SemiBold.ttf";
-	//	std::string filename = "OpenSans-SemiBoldItalic.ttf";
-	//	std::string filename = "Roboto-Black.ttf";
-	//	std::string filename = "Roboto-BlackItalic.ttf";
-	//	std::string filename = "Roboto-Bold.ttf";
-	//	std::string filename = "Roboto-BoldItalic.ttf";
-	//	std::string filename = "Roboto-Italic.ttf";
-	//	std::string filename = "Roboto-Light.ttf";
-	//	std::string filename = "Roboto-LightItalic.ttf";
-		std::string filename = "Roboto-Medium.ttf";
-	//	std::string filename = "Roboto-MediumItalic.ttf";
-	//	std::string filename = "Roboto-Regular.ttf";
-	//	std::string filename = "Roboto-Thin.ttf";
-	//	std::string filename = "Roboto-ThinItalic.ttf";
-		LoadFont("Resources/Game/Fonts/" + filename);
+	//	std::string filename = "Fonts/Alice-Regular.ttf";
+	//	std::string filename = "Fonts/Jokerman-Regular.ttf";
+	//	std::string filename = "Fonts/marediv.ttf";
+		std::string filename = "Fonts/Lobster-Regular.ttf";
+	//	std::string filename = "Fonts/LobsterTwo-Bold.ttf";
+	//	std::string filename = "Fonts/LobsterTwo-BoldItalic.ttf";
+	//	std::string filename = "Fonts/LobsterTwo-Italic.ttf";
+	//	std::string filename = "Fonts/LobsterTwo-Regular.ttf";
+	//	std::string filename = "Fonts/OpenSans-Bold.ttf";
+	//	std::string filename = "Fonts/OpenSans-BoldItalic.ttf";
+	//	std::string filename = "Fonts/OpenSans-ExtraBold.ttf";
+	//	std::string filename = "Fonts/OpenSans-ExtraBoldItalic.ttf";
+	//	std::string filename = "Fonts/OpenSans-Italic.ttf";
+	//	std::string filename = "Fonts/OpenSans-Light.ttf";
+	//	std::string filename = "Fonts/OpenSans-LightItalic.ttf";
+	//	std::string filename = "Fonts/OpenSans-Regular.ttf";
+	//	std::string filename = "Fonts/OpenSans-SemiBold.ttf";
+	//	std::string filename = "Fonts/OpenSans-SemiBoldItalic.ttf";
+	//	std::string filename = "Fonts/Roboto-Black.ttf";
+	//	std::string filename = "Fonts/Roboto-BlackItalic.ttf";
+	//	std::string filename = "Fonts/Roboto-Bold.ttf";
+	//	std::string filename = "Fonts/Roboto-BoldItalic.ttf";
+	//	std::string filename = "Fonts/Roboto-Italic.ttf";
+	//	std::string filename = "Fonts/Roboto-Light.ttf";
+	//	std::string filename = "Fonts/Roboto-LightItalic.ttf";
+	//	std::string filename = "Fonts/Roboto-Medium.ttf";
+	//	std::string filename = "Fonts/Roboto-MediumItalic.ttf";
+	//	std::string filename = "Fonts/Roboto-Regular.ttf";
+	//	std::string filename = "Fonts/Roboto-Thin.ttf";
+	//	std::string filename = "Fonts/Roboto-ThinItalic.ttf";
+		LoadFont(filename);
 	}
 
 	void RendererFonts2::Render(const CommandBuffer &commandBuffer)
 	{
+		m_mousePos = Mouse::Get()->GetPosition() * Window::Get()->GetDimensions();
+		Vector2 mouseDelta = m_oldMousePos - m_mousePos;
+
+		if (Mouse::Get()->GetButton(MouseButton::Left) != InputAction::Release)
+		{
+			mouseDelta *= 1.0f / m_canvasScale;
+			m_canvasOffset += mouseDelta;
+		}
+
+		m_oldMousePos = m_mousePos;
+
+		if (m_canvasScale != m_targetCanvasScale)
+		{
+			Vector2 oldSize = Window::Get()->GetDimensions() * (1.0f / m_canvasScale);
+			m_canvasScale = Maths::Lerp(m_canvasScale, m_targetCanvasScale, 30.0f * Engine::Get()->GetDeltaRender().AsSeconds());
+			Vector2 newSize = Window::Get()->GetDimensions() * (1.0f / m_canvasScale);
+
+			Vector2 tmp = oldSize - newSize;
+			tmp *= m_mousePos / Window::Get()->GetDimensions();
+			m_canvasOffset += tmp;
+		}
+
 		m_glyphInstanceCount = 0;
 		m_instanceBuffer.Map(reinterpret_cast<void **>(&m_glyphInstances));
 
@@ -97,13 +125,14 @@ namespace acid
 
 		for (uint32_t i = 0; i < lines.size(); i++)
 		{
-			AppendText(3.0f * (10.0f - 0.0f),
-			           3.0f * (30.0f - 0.0f + i * 30.0f),
-			           0.02f * 3.0f, lines[i], Colour::Black);
+			AppendText(m_canvasScale * (10.0f - m_canvasOffset.m_x),
+				m_canvasScale * (30.0f - m_canvasOffset.m_y + i * 30.0f),
+				0.02f * m_canvasScale, lines[i], Colour::Black);
 		}
 
-		AppendText(5.0f, 25.0f, 0.02f, "Frame Time: " + String::To(Engine::Get()->GetDelta().AsMilliseconds()) + "ms", Colour::Red);
-		AppendText(5.0f, 55.0f, 0.02f, "Fps: " + String::To<uint32_t>(1.0f / Engine::Get()->GetDelta().AsSeconds()), Colour::Green);
+		AppendText(5.0f, 25.0f, 0.02f, "Frame Time: " + String::To(1000.0f / Engine::Get()->GetFps()) + "ms", Colour::Red);
+		AppendText(5.0f, 55.0f, 0.02f, "Fps: " + String::To<uint32_t>(Engine::Get()->GetFps()), Colour::Green);
+		AppendText(5.0f, 85.0f, 0.02f, "Ups: " + String::To<uint32_t>(Engine::Get()->GetUps()), Colour::Blue);
 
 		m_instanceBuffer.Unmap();
 
@@ -128,7 +157,7 @@ namespace acid
 		vkCmdDraw(commandBuffer.GetCommandBuffer(), 4, m_glyphInstanceCount, 0, 0);
 	}
 
-	Shader::VertexInput RendererFonts2::GlyphInstance::GetVertexInput(const uint32_t &binding)
+	Shader::VertexInput RendererFonts2::GetVertexInput(const uint32_t &binding)
 	{
 		std::vector<VkVertexInputBindingDescription> bindingDescriptions(1);
 
@@ -175,11 +204,19 @@ namespace acid
 	{
 		auto physicalDevice = Renderer::Get()->GetPhysicalDevice();
 
+		auto fileLoaded = Files::Read(filename);
+
+		if (!fileLoaded)
+		{
+			Log::Error("Font could not be loaded: '%s'\n", filename.c_str());
+			return;
+		}
+
 		FT_Library library;
 		FT_CHECK(FT_Init_FreeType(&library));
 
 		FT_Face face;
-		FT_CHECK(FT_New_Face(library, filename.c_str(), 0, &face)); // TODO: FT_New_Memory_Face
+		FT_CHECK(FT_New_Memory_Face(library, (FT_Byte*)fileLoaded->data(), (FT_Long)fileLoaded->size(), 0, &face));
 		FT_CHECK(FT_Set_Char_Size(face, 0, 1000 * 64, 96, 96));
 
 		uint32_t totalPoints = 0;
@@ -190,7 +227,7 @@ namespace acid
 		m_glyphInfos = std::vector<HostGlyphInfo>(glyphCount);
 		std::vector<Outline> outlines(glyphCount);
 
-	//	Log::Out("Glyph Count: %i\n", glyphCount);
+		Log::Out("Glyph Count: %i\n", glyphCount);
 
 		FT_UInt glyphIndex;
 		FT_ULong charcode = FT_Get_First_Char(face, &glyphIndex);
@@ -199,7 +236,6 @@ namespace acid
 		while (glyphIndex != 0)
 		{
 			FT_CHECK(FT_Load_Glyph(face, glyphIndex, FT_LOAD_NO_HINTING));
-		//	Log::Out("%i(%i) = %c\n", i, glyphIndex, charcode);
 
 			m_charmap.emplace(charcode, i);
 			HostGlyphInfo *hgi = &m_glyphInfos[i];
@@ -227,11 +263,14 @@ namespace acid
 		m_glyphPointsOffset = AlignUint32(m_glyphInfoSize + m_glyphCellsSize, alignment);
 
 		m_glyphDataSize = m_glyphPointsOffset + m_glyphPointsSize;
-		std::unique_ptr<char[]> glyphData(new char[m_glyphDataSize]);
+		m_storageGlyphs = std::make_unique<StorageBuffer>(m_glyphDataSize);
 
-		auto deviceGlyphInfos = reinterpret_cast<DeviceGlyphInfo*>(glyphData.get() + m_glyphInfoOffset);
-		auto cells = reinterpret_cast<uint32_t*>(glyphData.get() + m_glyphCellsOffset);
-		auto points = reinterpret_cast<Vector2*>(glyphData.get() + m_glyphPointsOffset);
+		char *glyphData;
+		m_storageGlyphs->Map(reinterpret_cast<void **>(&glyphData));
+
+		auto deviceGlyphInfos = reinterpret_cast<DeviceGlyphInfo*>(glyphData + m_glyphInfoOffset);
+		auto cells = reinterpret_cast<uint32_t*>(glyphData + m_glyphCellsOffset);
+		auto points = reinterpret_cast<Vector2*>(glyphData + m_glyphPointsOffset);
 
 		uint32_t pointOffset = 0;
 		uint32_t cellOffset = 0;
@@ -256,13 +295,13 @@ namespace acid
 			cellOffset += o->cells.size();
 		}
 
+		m_storageGlyphs->Unmap();
+
 		assert(pointOffset == totalPoints);
 		assert(cellOffset == totalCells);
 
 		FT_CHECK(FT_Done_Face(face));
 		FT_CHECK(FT_Done_FreeType(library));
-
-		m_storageGlyphs = std::make_unique<StorageBuffer>(m_glyphDataSize, glyphData.get());
 	}
 
 	void RendererFonts2::AppendText(const float &x, const float &y, const float &scale, const std::wstring &text, const Colour &colour)

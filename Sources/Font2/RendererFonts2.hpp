@@ -19,6 +19,8 @@ namespace acid
 		explicit RendererFonts2(const Pipeline::Stage &pipelineStage);
 
 		void Render(const CommandBuffer &commandBuffer) override;
+
+		static Shader::VertexInput GetVertexInput(const uint32_t &binding = 0);
 	private:
 		struct CellInfo
 		{
@@ -34,8 +36,6 @@ namespace acid
 			uint32_t glyphIndex;
 			float sharpness;
 			Colour colour;
-
-			static Shader::VertexInput GetVertexInput(const uint32_t &binding = 0);
 		};
 
 		struct HostGlyphInfo
@@ -74,5 +74,11 @@ namespace acid
 
 		GlyphInstance *m_glyphInstances;
 		uint32_t m_glyphInstanceCount;
+
+		Vector2 m_mousePos;
+		Vector2 m_oldMousePos;
+		Vector2 m_canvasOffset;
+		float m_canvasScale;
+		float m_targetCanvasScale;
 	};
 }
